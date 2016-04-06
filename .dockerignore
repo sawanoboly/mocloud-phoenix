@@ -1,0 +1,9 @@
+.*
+
+
+## App
+todo/_build/
+todo/db/
+todo/deps/
+todo/priv/static/
+todo/node_modules/
