@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 STATEFILE=/var/log/container_status
+APP_NAME=${APP_NAME:-"todo"}
 MIX_BIN=`which mix`
 
 echo "installing" > $STATEFILE
@@ -13,20 +14,27 @@ cd /srv/app
 
 export MIX_ENV=${MIX_ENV:-"prod"}
 export PORT=${PORT:-"80"}
-elixir --erl "-smp enable" $MIX_BIN deps.get --force
-elixir --erl "-smp enable" $MIX_BIN compile
+ERL_OPTS="-smp enable"
+elixir --erl "${ERL_OPTS}" $MIX_BIN deps.get --force
+elixir --erl "${ERL_OPTS}" $MIX_BIN compile
 mkdir -p priv/static
-elixir --erl "-smp enable" $MIX_BIN release
 if [ -f package.json ] ; then
   echo "Running npm install..."
   npm set progress=false
   npm install
-  brunch build
+  brunch build --production
 fi
-elixir --erl "-smp enable" $MIX_BIN phoenix.digest
-elixir --erl "-smp enable" $MIX_BIN ecto.create
-elixir --erl "-smp enable" $MIX_BIN ecto.migrate
+elixir --erl "${ERL_OPTS}" $MIX_BIN phoenix.digest
+
+elixir --erl "${ERL_OPTS}" $MIX_BIN release --erl="${ERL_OPTS}"
+elixir --erl "${ERL_OPTS}" $MIX_BIN ecto.setup
+## for SQLite
+if [ -d ./db ] ; then
+  ln -sf ../../db rel/todo/db
+fi
 
 
 echo "complete" > $STATEFILE
-elixir --erl "-smp enable" $MIX_BIN phoenix.server
+# elixir --erl "${ERL_OPTS}" $MIX_BIN phoenix.server
+./rel/todo/bin/${APP_NAME} foreground
+
